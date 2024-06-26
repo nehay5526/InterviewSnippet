@@ -1,0 +1,10 @@
+{
+    "java.project.sourcePaths": [
+        "test",
+        "String",
+        "Other/Other",
+        "Generics",
+        "DataStructure/stack"
+    ],
+    "java.debug.settings.onBuildFailureProceed": true
+}

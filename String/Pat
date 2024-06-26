@@ -1,0 +1,46 @@
+with cte as (
+   SELECT
+		usr.id AS userId,
+        usr.username AS userName,
+        usr.name AS name,
+        usr.email AS emailId,
+        usr.phone_no AS phoneNo,
+        usr.role_alias AS roleAlias,
+        usr.parent_id AS parentId,
+        TRUNCATE(ad.balance, 2) AS availableDW,
+        ad.exposure_limit AS exposureLimit,
+        TRUNCATE(ad.exposure, 2) selfExposure,
+        usr.account_locked AS accLocked,
+        usr.account_expired AS accSuspended,
+        usr.acc_suspended_by_owner AS accSuspendedByOwner,
+        usr.enabled AS enabled,
+        usr.status_updated_by AS statChngBy,
+        ad.credit_ref AS creditRef,
+        ad.currency AS currency,
+        ad.rate AS rate,
+        CASE
+            WHEN SUBSTRING_INDEX(usr.level, :userIdLevel, - 1) LIKE '%/%' THEN SUBSTRING_INDEX(SUBSTRING_INDEX(usr.level, :userIdLevel, - 1), '/', 1)
+            ELSE usr.id
+        END AS gp
+   FROM
+        play_auth.users AS usr
+   INNER JOIN play_auth.account_details AS ad ON ad.user_id = usr.id
+   WHERE
+        usr.level LIKE :level AND ad.currency = :currency
+   )select a.*,
+	TRUNCATE(SUM(b.availableDW), 2) AS balance,
+		truncate(SUM(b.availableDW)-a.availableDW,2) AS playerBalance,
+		truncate(SUM(b.selfExposure),2) as exposure,
+		truncate(SUM(b.availableDW) - a.creditRef,2) AS refPnL,
+		truncate(SUM(b.availableDW)+SUM(b.selfExposure),2)  AS availBal,CASE
+			when a.enabled then UPPER('a')
+			when a.accSuspended and a.accLocked is false  then  UPPER('b')
+			when a.accSuspended and a.accLocked then UPPER('c')
+			else  UPPER('d')
+		End as sortByStatus
+	from cte as a inner join cte as b on a.userId = b.gp group by b.gp
+   ADD_STATUS
+   ADD_USER
+   SORT
+   limit 
+   :offset, :size
